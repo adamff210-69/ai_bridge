@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>PromptBridge — empty page</title>
+    <!--
+      Nothing to detect. The engine must degrade to "no composer, no turns"
+      without throwing, because a content script runs on every page of every
+      host and most of them are not chat UIs.
+    -->
+    <style>
+      body { font:15px/1.6 ui-sans-serif,system-ui,sans-serif; background:#fff; color:#111; margin:0; padding:40px; }
+      .card { border:1px solid #ddd; border-radius:10px; padding:18px; max-width:520px; }
+    </style>
+  </head>
+  <body>
+    <h1>Settings</h1>
+    <div class="card">
+      <p>This page has no chat, no composer, and no transcript. That is the normal case for most of the web, and the content script still loads here.</p>
+      <p style="color:#666;font-size:13px">PromptBridge must find nothing, say nothing, and break nothing.</p>
+    </div>
+  </body>
+</html>

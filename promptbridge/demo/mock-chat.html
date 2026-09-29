@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PromptBridge — mock AI host</title>
+    <!--
+      An adapter test bench. Each ?site= emits the *real* DOM shape that vendor's
+      adapter targets, so you can check selectors without an account.
+      Load this file directly; nothing here is part of the extension.
+    -->
+    <style>
+      body { margin:0; background:#212121; color:#ececec; font:15px/1.65 ui-sans-serif,system-ui,sans-serif; }
+      .switch { position:fixed; top:10px; right:10px; background:#2b2b2b; border:1px solid #444; color:#ccc;
+                border-radius:8px; padding:6px 10px; font:12px system-ui; z-index:5; }
+      .switch a { color:#8ab4f8; margin:0 5px; text-decoration:none; }
+      .switch a.on { color:#fff; text-decoration:underline; }
+      main { max-width:760px; margin:0 auto; padding:56px 16px 150px; }
+      article { margin:16px 0; }
+      [data-message-author-role="user"] { background:#303030; border-radius:14px; padding:10px 14px; max-width:78%; margin-left:auto; display:block; }
+      [data-testid="user-message"] { background:#303030; border-radius:14px; padding:10px 14px; max-width:78%; margin-left:auto; display:block; }
+      user-query { display:block; background:#303030; border-radius:14px; padding:10px 14px; max-width:78%; margin-left:auto; }
+      model-response { display:block; }
+      pre { background:#0d0d0d; padding:12px; border-radius:10px; overflow:auto; font-size:13px; }
+      form { position:fixed; left:0; right:0; bottom:0; background:#212121; padding:12px; border-top:1px solid #333; }
+      form .inner { max-width:760px; margin:0 auto; display:flex; gap:8px; }
+      #prompt-textarea, #ask-input, .ProseMirror, .ql-editor, #prompt-texteditor {
+        flex:1; background:#303030; color:#eee; border:1px solid #444; border-radius:20px;
+        padding:12px 16px; font:inherit; resize:none; min-height:52px; }
+      rich-textarea { display:block; flex:1; }
+      .ql-editor { border-radius:20px; }
+      .who { font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:#7a7a7a; display:block; margin-bottom:4px; }
+    </style>
+  </head>
+  <body>
+    <div class="switch" id="switch"></div>
+    <main id="thread"></main>
+
+    <form onsubmit="return submitMock(event)">
+      <div class="inner" id="composerSlot"></div>
+    </form>
+
+    <script>
+      var SITE = new URLSearchParams(location.search).get('site') || 'chatgpt';
+      var SITES = ['chatgpt', 'claude', 'gemini', 'perplexity', 'copilot'];
+
+      var SEED = [
+        { role: 'user', text: 'Our Node ingest service drops about 3% of uploads under load. Logs show occasional ECONNRESET from the upstream provider.\n\nConstraints: must stay on the current BullMQ queue library, no new infra, and the fix has to ship this week.' },
+        { role: 'assistant', text: "The 5s socketTimeout races the 5s retry backoff, so a retry can fire while the original socket is still half-open.\n\n- Decision: exponential backoff with jitter, 100ms base, 8 attempts\n- Decision: set socketTimeout to 20s, pool cap of 64\n- Decision: keep BullMQ, add a stalled event listener\n\n```js\nconst delay = (n) => 100 * 2 ** n + Math.random() * 100;\n```\n\nNext step: wire the stalled-event listener and re-run the load profile." },
+        { role: 'user', text: 'Make the change and add a regression test that would have caught this.' },
+        { role: 'assistant', text: 'Applied. The test fakes a socket that resets mid-flight and asserts we exhaust the backoff schedule instead of surfacing ECONNRESET.\n\nSuccess = npm test -- ingest stays green under --repeat 200.\n\nLet me know if you want me to add the pool-cap metric to the dashboard too.' }
+      ];
+
+      function esc(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                .replace(/```([\w-]*)\n([\s\S]*?)```/g, function (_, l, b) { return '<pre><code>' + b + '</code></pre>'; })
+                .replace(/\n\n/g, '<br><br>').replace(/\n- /g, '<br>• ');
+      }
+
+      function wrap(role, body) {
+        var who = '<span class="who">' + (role === 'user' ? 'You' : 'Assistant') + '</span>';
+        if (SITE === 'claude') {
+          return '<div data-testid="' + role + '-message">' + who + body + '</div>';
+        }
+        if (SITE === 'gemini') {
+          return '<' + (role === 'user' ? 'user-query' : 'model-response') + '>' + who + body + '</' + (role === 'user' ? 'user-query' : 'model-response') + '>';
+        }
+        if (SITE === 'copilot') {
+          return '<div class="response-message ' + (role === 'user' ? 'user-request' : 'assistant') + '" data-testid="chat-turn">' + who + body + '</div>';
+        }
+        if (SITE === 'perplexity') {
+          return '<div data-testid="conversation-turn" class="' + (role === 'user' ? 'user ask' : 'prose') + '">' + who + body + '</div>';
+        }
+        return '<article data-message-author-role="' + role + '">' + who + body + '</article>';
+      }
+
+      // each vendor wraps its composer differently; mirror that so the adapter is exercised honestly
+      var COMPOSERS = {
+        chatgpt:    '<textarea id="prompt-textarea" placeholder="Ask anything…"></textarea><button type="submit" aria-label="Send">Send</button>',
+        claude:     '<div class="ProseMirror" contenteditable="true" role="textbox" data-placeholder="Reply"></div><button type="submit" aria-label="Send">Send</button>',
+        gemini:     '<rich-textarea><div class="ql-editor" contenteditable="true"></div></rich-textarea><button type="submit" aria-label="Send">Send</button>',
+        perplexity: '<textarea id="ask-input" placeholder="Ask anything…"></textarea><button type="submit" aria-label="Send">Send</button>',
+        copilot:    '<div id="prompt-texteditor" contenteditable="true" role="textbox"></div><button type="submit" aria-label="Send">Send</button>'
+      };
+      document.getElementById('composerSlot').innerHTML = COMPOSERS[SITE] || COMPOSERS.chatgpt;
+
+      var turns = SEED.slice();
+
+      function render() {
+        document.getElementById('thread').innerHTML = turns.map(function (t) {
+          return wrap(t.role, esc(t.text));
+        }).join('');
+      }
+
+      document.getElementById('switch').innerHTML = 'emulate: ' + SITES.map(function (s) {
+        return '<a class="' + (s === SITE ? 'on' : '') + '" href="?site=' + s + '">' + s + '</a>';
+      }).join('');
+
+      render();
+
+      function submitMock(e) {
+        e.preventDefault();
+        var el = document.querySelector('#prompt-textarea, #ask-input, [contenteditable="true"]');
+        var v = (el.isContentEditable ? el.innerText : el.value).trim();
+        if (!v) return false;
+        turns = turns.concat([
+          { role: 'user', text: v },
+          { role: 'assistant', text: '(mock reply) noted — this is the local test bench, not a real model.' }
+        ]);
+        render();
+        el.isContentEditable ? (el.innerText = '') : (el.value = '');
+        return false;
+      }
+    </script>
+  </body>
+</html>

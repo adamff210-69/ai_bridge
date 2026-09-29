@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PromptBridge — preview</title>
+    <!--
+      Open this file directly (double-click it). No server, no build.
+      It loads the same files the extension does, from ../extension/.
+    -->
+    <style>
+      body { margin:0; background:#212121; color:#ececec; font:15px/1.65 ui-sans-serif,system-ui,sans-serif; }
+      .bar { position:fixed; top:0; left:0; right:0; z-index:20; background:#171717; border-bottom:1px solid #2f2f2f;
+             padding:8px 14px; display:flex; gap:7px; align-items:center; font-size:12px; color:#9a9a9a; flex-wrap:wrap; }
+      .bar b { color:#e6edf3; }
+      .bar a { color:#8ab4f8; text-decoration:none; }
+      .bar button { background:#242424; color:#ddd; border:1px solid #3a3a3a; border-radius:7px; padding:4px 10px; cursor:pointer; font:inherit; }
+      .bar button:hover { border-color:#7c8cff; color:#fff; }
+      .bar .sp { flex:1; }
+      main { max-width:760px; margin:0 auto; padding:64px 16px 170px; }
+      article { margin:18px 0; }
+      .who { display:block; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:#7a7a7a; margin-bottom:5px; }
+      [data-role="user"] { background:#303030; border-radius:14px; padding:12px 15px; margin-left:auto; max-width:80%; }
+      pre { background:#0d0d0d; padding:12px; border-radius:10px; overflow:auto; font-size:13px; }
+      form { position:fixed; left:0; right:0; bottom:0; background:#212121; padding:12px; border-top:1px solid #333; }
+      form .inner { max-width:760px; margin:0 auto; }
+      textarea { width:100%; background:#303030; color:#eee; border:1px solid #444; border-radius:18px;
+                 padding:12px 16px; font:inherit; resize:vertical; min-height:52px; }
+      .note { max-width:760px; margin:26px auto 0; padding:12px 14px; border:1px dashed #3a3a3a; border-radius:10px;
+              color:#8a8a8a; font-size:13px; }
+      .note b { color:#bbb; }
+      #handoff { color:#7c8cff; }
+      #lensOut { margin-top:14px; padding:14px 16px; border-radius:12px; background:rgba(124,140,255,.08);
+                 border:1px solid rgba(124,140,255,.35); }
+      #lensOut:empty { display:none; }
+      .lens-label { font-size:10px; letter-spacing:.1em; color:#7c8cff; margin-bottom:7px; }
+      #lensOut pre { background:none; padding:0; margin:0; white-space:pre-wrap; word-break:break-word; font-size:12.5px; }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <b>PromptBridge</b><a href="mock-chat.html">mock host</a><span>preview · real files, no build</span>
+      <a href="../extension/library.html">library</a>
+      <a href="../extension/onboarding.html">onboarding</a>
+      <span class="sp"></span>
+      <button id="pal">palette <b>⌃⇧K</b></button>
+      <button data-open="overview">drawer</button>
+      <button data-open="prompt">promptsmith</button>
+      <button data-open="send">send to…</button>
+      <button data-open="lens">lens</button>
+      <button data-open="runs">compare</button>
+      <button data-open="settings">settings</button>
+    </div>
+
+    <main>
+      <div id="thread"></div>
+      <div id="lensOut"></div>
+      <div class="note">
+        <b>Real:</b> the launcher, palette, drawer, prompt scoring, distiller and dialects — the same files the
+        extension loads. <b>Stubbed:</b> this page's DOM, and opening real tabs.
+        <div id="handoff" style="margin-top:6px">— press “Send to Claude” in the panel to see the rendered prompt —</div>
+      </div>
+    </main>
+
+    <form onsubmit="return false">
+      <div class="inner">
+        <textarea id="composer" placeholder="Ask anything…"></textarea>
+      </div>
+    </form>
+
+    <script src="../extension/env.js"></script>
+    <script src="../extension/lib.js"></script>
+    <script src="../extension/sense.js"></script>
+    <script src="../extension/adapters.js"></script>
+    <script src="../extension/observe.js"></script>
+    <script src="../extension/lens.js"></script>
+    <script src="../extension/promptsmith.js"></script>
+    <script src="../extension/pack.js"></script>
+    <script src="../extension/dictate.js"></script>
+    <script src="../extension/shell.js"></script>
+    <script src="../extension/localbus.js"></script>
+    <script src="preview.js"></script>
+  </body>
+</html>

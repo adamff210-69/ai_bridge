@@ -1,0 +1,102 @@
+{
+  "manifest_version": 3,
+  "name": "PromptBridge",
+  "version": "0.3.0",
+  "description": "Your work should follow you, not your tab. Works on any AI chat site — detected, not hardcoded. Capture a thread as a Context Pack, drop it into any other chat, and dictate with self-correction.",
+  "minimum_chrome_version": "111",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "sw.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "PromptBridge — Ctrl+Shift+K",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/16.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "env.js",
+        "lib.js",
+        "sense.js",
+        "adapters.js",
+        "observe.js",
+        "lens.js",
+        "promptsmith.js",
+        "pack.js",
+        "dictate.js",
+        "shell.js",
+        "inject.js",
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "css": [
+        "page.css"
+      ]
+    }
+  ],
+  "commands": {
+    "toggle-palette": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+K",
+        "mac": "Command+Shift+K"
+      },
+      "description": "Open the PromptBridge command palette"
+    },
+    "grab-pack": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+C",
+        "mac": "Command+Shift+C"
+      },
+      "description": "Capture this thread as a Context Pack"
+    },
+    "send-to": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Send this thread to another AI"
+    },
+    "dictate-toggle": {
+      "suggested_key": {
+        "default": "Alt+Shift+V",
+        "mac": "Alt+Shift+V"
+      },
+      "description": "Toggle voice typing"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "shell.css",
+        "icons/*",
+        "page.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

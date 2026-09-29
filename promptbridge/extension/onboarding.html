@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Welcome to PromptBridge</title>
+    <link rel="stylesheet" href="page.css" />
+    <style>
+      main { max-width: 720px; }
+      .step { display: none; }
+      .step.on { display: block; }
+      .steps { display: flex; gap: 6px; margin-bottom: 26px; }
+      .steps i { height: 3px; flex: 1; border-radius: 3px; background: var(--line); }
+      .steps i.on { background: var(--acc); }
+      .engines { display: grid; gap: 9px; }
+      .engine { display: flex; gap: 12px; align-items: flex-start; background: var(--bg2); border: 1px solid var(--line); border-radius: 11px; padding: 12px 14px; }
+      .engine .n { width: 26px; height: 26px; border-radius: 8px; background: var(--acc); color: #0b1020; display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
+      .engine b { display: block; }
+      .engine p { margin: 2px 0 0; color: var(--dim); font-size: 13px; }
+      .sitegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+      .site { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; cursor: pointer; font-size: 13px; }
+      .site.off { opacity: .45; }
+      .nav { display: flex; gap: 8px; margin-top: 24px; }
+      kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; color: var(--dim); }
+    </style>
+  </head>
+  <body>
+    <header><b>PromptBridge</b><span class="pill" id="ver">0.2.0</span></header>
+    <main>
+      <div class="steps"><i class="on"></i><i></i><i></i><i></i></div>
+
+      <section class="step on">
+        <h1>Your work should follow you, not your tab.</h1>
+        <p class="sub">PromptBridge sits on top of the AI sites you already use. It does not replace them, and it does not become another chatbot.</p>
+        <div class="engines">
+          <div class="engine"><div class="n">1</div><div><b>Context Packs</b><p>Distil a thread into a short, structured brief and send it to another model — re-shaped for that model's idiom, not pasted as a wall of text.</p></div></div>
+          <div class="engine"><div class="n">2</div><div><b>Promptsmith</b><p>Scores your prompt out of 100 on seven slots and repairs what is missing. Free tier is instant and offline.</p></div></div>
+          <div class="engine"><div class="n">3</div><div><b>Voice</b><p>Speech to intent, not speech to text. Say "send it", "enhance that", "send to Claude".</p></div></div>
+          <div class="engine"><div class="n">4</div><div><b>Focus shell</b><p>A command palette, reading mode, and an output lens that reformats an answer without spending another token.</p></div></div>
+          <div class="engine"><div class="n">5</div><div><b>Fan-out &amp; compare</b><p>One prompt to five models at once, answers collected side by side.</p></div></div>
+        </div>
+        <div class="nav"><span class="sp"></span><button data-go="1" class="pri">Next</button></div>
+      </section>
+
+      <section class="step">
+        <h1>Where should it run?</h1>
+        <p class="sub">Everything happens on this device. You can turn any site off and the extension stays out of the way.</p>
+        <div class="sitegrid" id="sites"></div>
+        <div class="nav"><button data-go="0">Back</button><span class="sp"></span><button data-go="2" class="pri">Next</button></div>
+      </section>
+
+      <section class="step">
+        <h1>Voice and defaults</h1>
+        <p class="sub">Both can be changed later from the panel or the library page.</p>
+        <div class="card">
+          <h2 style="margin-top:0">Dictation tier</h2>
+          <div class="row wrap">
+            <button data-set="dictateTier" data-val="webspeech" class="pri">Browser recogniser</button>
+            <button data-set="dictateTier" data-val="whisper-local">Local Whisper</button>
+          </div>
+          <p style="color:var(--dim);font-size:13px;margin:10px 0 0" id="tierhelp"></p>
+        </div>
+        <div class="card">
+          <h2 style="margin-top:0">How you dictate</h2>
+          <div class="row wrap">
+            <button data-set="flowMode" data-val="true" class="pri">Double-tap for Flow mode</button>
+            <button data-set="smartCorrections" data-val="true" class="pri">Fix mistakes out loud</button>
+            <button data-set="learnDictionary" data-val="true" class="pri">Learn my vocabulary</button>
+          </div>
+          <p style="color:var(--dim);font-size:13px;margin:10px 0 0">
+            Dictate naturally — “budget 50K for tools, actually 75K” corrects itself, double-tap
+            <b>Alt+Shift+V</b> to lock the mic on and say “send it”, and any word you retype gets remembered
+            on this device. All of it is local; the learned vocabulary never leaves your browser.
+          </p>
+        </div>
+        <div class="card">
+          <h2 style="margin-top:0">Transfer fidelity</h2>
+          <div class="row wrap">
+            <button data-set="fidelity" data-val="distilled" class="pri">Distilled</button>
+            <button data-set="fidelity" data-val="full">Full transcript</button>
+            <button data-set="fidelity" data-val="atomic">Artifacts only</button>
+          </div>
+          <p style="color:var(--dim);font-size:13px;margin:10px 0 0" id="fidhelp"></p>
+        </div>
+        <div class="nav"><button data-go="1">Back</button><span class="sp"></span><button data-go="3" class="pri">Next</button></div>
+      </section>
+
+      <section class="step">
+        <h1>Privacy, in one paragraph</h1>
+        <div class="card">
+          <p style="margin:0">
+            PromptBridge has no server. Packs live in this browser's storage. Style DNA stores counters —
+            how long your prompts tend to be, whether you specify a format — never your text. Redaction scrubs
+            emails, phone numbers, cards and API keys before anything leaves the page. The optional LLM tier only
+            runs if you paste your own provider key, and that request goes straight from your browser to that provider.
+          </p>
+        </div>
+        <div class="card">
+          <h2 style="margin-top:0">Your shortcuts</h2>
+          <div class="row wrap" style="gap:14px;color:var(--dim)">
+            <span><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>K</kbd> palette</span>
+            <span><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>C</kbd> capture</span>
+            <span><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>S</kbd> send to…</span>
+            <span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>V</kbd> voice</span>
+          </div>
+        </div>
+        <label class="row" style="margin-top:14px"><input type="checkbox" id="redact" checked> <span>Redact secrets &amp; PII before every transfer</span></label>
+        <div class="nav"><button data-go="2">Back</button><span class="sp"></span><button id="finish" class="pri">Start using PromptBridge</button></div>
+      </section>
+    </main>
+    <div class="toast" id="toast"></div>
+    <!-- no bundler, no modules: plain scripts, sharing one PB global -->
+    <script src="env.js"></script>
+    <script src="lib.js"></script>
+    <script src="onboarding.js"></script>
+  </body>
+</html>

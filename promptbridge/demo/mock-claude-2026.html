@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PromptBridge — Claude 2026 DOM</title>
+    <!--
+      claude.ai as it renders in 2026, for selector reconciliation.
+
+      What a shipped extension must survive: `[data-user-message-bubble]` and
+      `div.mb-1.mt-6.group` no longer exist, and the composer is not
+      `#prompt-textarea`. The turn hooks that survive are
+      `[data-testid="user-message"]` and `[data-testid="assistant-message"]`,
+      but they are wrapped in a tree full of look-alike containers — a sidebar
+      of recent chats, a tool-call card, and a streaming control — which is what
+      makes naive first-match selectors produce a conversation that is partly
+      the sidebar.
+    -->
+    <style>
+      body { margin:0; background:#262624; color:#f5f4ef; font:15px/1.68 ui-sans-serif,system-ui,sans-serif; height:100vh; display:flex; }
+      aside { width:240px; border-right:1px solid #3a3a37; padding:14px 10px; flex:none; }
+      aside a { display:block; padding:7px 10px; border-radius:8px; color:#c8c6bd; font-size:13px; text-decoration:none; }
+      main { flex:1; display:flex; flex-direction:column; min-width:0; }
+      #thread { flex:1; overflow:auto; max-width:780px; width:100%; margin:0 auto; padding:26px 20px 20px; }
+      .mb-1 { margin-bottom:4px; }
+      .mt-6 { margin-top:24px; }
+      [data-testid="user-message"] { background:#3a3a37; border-radius:14px; padding:11px 15px; max-width:76%; margin-left:auto; }
+      [data-testid="assistant-message"] { max-width:100%; }
+      .tool-card { border:1px solid #43433f; border-radius:10px; padding:9px 12px; font-size:12.5px; color:#b8b6ad; margin:6px 0; }
+      pre { background:#1f1f1d; padding:12px; border-radius:10px; overflow:auto; font-size:13px; }
+      form { border-top:1px solid #3a3a37; padding:12px 20px 18px; }
+      form > div { max-width:780px; margin:0 auto; display:flex; gap:9px; align-items:flex-end; }
+      .ProseMirror { flex:1; min-height:52px; background:#30302e; border:1px solid #4a4a46; border-radius:20px;
+                     padding:13px 17px; font:inherit; color:inherit; outline:none; }
+      button[aria-label="Send message"] { width:42px; height:42px; border-radius:50%; border:1px solid #4a4a46;
+                     background:#3a3a37; color:#d8d6cd; font-size:16px; }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <a href="#">New conversation</a>
+      <a href="#">ECONNRESET on ingest</a>
+      <a href="#">BullMQ stall handling</a>
+      <a href="#">Quarterly board numbers</a>
+    </aside>
+    <main>
+      <div id="thread"></div>
+      <form>
+        <div>
+          <div class="ProseMirror" contenteditable="true" role="textbox" data-placeholder="Reply to Claude…"></div>
+          <button type="submit" aria-label="Send message">&#9650;</button>
+        </div>
+      </form>
+    </main>
+
+    <script>
+      var SEED = [
+        { role: 'user', text: 'Our ingest service drops about 3% of uploads under load. Logs show ECONNRESET from the upstream provider.\n\nConstraints: must stay on BullMQ, no new infra, ship this week.' },
+        { role: 'assistant', text: 'The 5s socketTimeout races the 5s retry backoff, so a retry can fire while the original socket is still half-open.\n\n- Decision: exponential backoff with jitter\n- Decision: socketTimeout to 20s\n\n```js\nconst delay = (n) => 100 * 2 ** n;\n```' },
+        { role: 'user', text: 'Make the change and add a regression test.' },
+        { role: 'assistant', text: 'Applied. The test fakes a socket that resets mid-flight and asserts we exhaust the backoff schedule.' }
+      ];
+      function esc(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/```([\w-]*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
+          .replace(/\n\n/g,'<br><br>').replace(/\n- /g,'<br>• ');
+      }
+      document.getElementById('thread').innerHTML = SEED.map(function (t) {
+        // A tool-call card sits between the assistant turns, exactly as it does live.
+        var mid = t.role === 'assistant' && t.text.length > 200
+          ? '<div class="tool-card mb-1">Ran: <code>npm test -- ingest</code> &middot; 214 passed</div>' : '';
+        return '<div class="mb-1 mt-6" data-testid="' + t.role + '-message">' + esc(t.text) + '</div>' + mid;
+      }).join('');
+      document.querySelector('form').addEventListener('submit', function (e) { e.preventDefault(); });
+    </script>
+  </body>
+</html>

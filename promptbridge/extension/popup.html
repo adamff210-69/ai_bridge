@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PromptBridge</title>
+    <style>
+      :root { color-scheme: dark; --bg:#0d1117; --bg2:#161b22; --line:#2a323d; --fg:#e6edf3; --dim:#8b949e; --acc:#7c8cff; --ok:#3fb950; --err:#f85149; }
+      * { box-sizing: border-box; }
+      body { margin:0; width:392px; background:var(--bg); color:var(--fg);
+             font:13px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Inter,system-ui,sans-serif; }
+      header { display:flex; align-items:center; gap:9px; padding:12px 14px; border-bottom:1px solid var(--line); }
+      header b { font-size:14px; flex:1; }
+      main { padding:13px 14px 16px; }
+      h4 { margin:0 0 8px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); }
+      section { margin-bottom:16px; }
+      .card { background:var(--bg2); border:1px solid var(--line); border-radius:11px; padding:11px 12px; margin-bottom:8px; }
+      .row { display:flex; align-items:center; gap:8px; }
+      .row.wrap { flex-wrap:wrap; }
+      .sp { flex:1; min-width:0; }
+      .muted { color:var(--dim); }
+      .sw { width:10px; height:10px; border-radius:3px; flex:none; }
+      .tag { font-size:10px; padding:2px 7px; border:1px solid var(--line); border-radius:20px; color:var(--dim); white-space:nowrap; }
+      .tag.ok { color:var(--ok); border-color:var(--ok); }
+      .tag.err { color:var(--err); border-color:var(--err); }
+      .grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+      button { font:inherit; background:var(--bg2); color:var(--fg); border:1px solid var(--line);
+               border-radius:9px; padding:7px 10px; cursor:pointer; }
+      button:hover { border-color:var(--acc); }
+      button.pri { background:var(--acc); border-color:var(--acc); color:#0b1020; font-weight:600; }
+      select, input[type=text] { background:var(--bg); color:var(--fg); border:1px solid var(--line);
+               border-radius:8px; padding:6px 9px; font:inherit; }
+      input[type=checkbox] { accent-color:var(--acc); width:15px; height:15px; }
+      label { display:flex; align-items:center; gap:8px; cursor:pointer; }
+      .dest { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:9px;
+              padding:7px 9px; cursor:pointer; background:var(--bg2); }
+      .dest:hover { border-color:var(--acc); }
+      kbd { font:10px ui-monospace,monospace; border:1px solid var(--line); border-bottom-width:2px;
+            border-radius:5px; padding:1px 5px; color:var(--dim); }
+      .empty { color:var(--dim); text-align:center; padding:22px 10px; border:1px dashed var(--line); border-radius:11px; }
+      .hint { font-size:11px; color:var(--dim); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <b>PromptBridge</b>
+      <span class="tag" id="site">checking…</span>
+      <span class="tag" id="health">—</span>
+    </header>
+    <main>
+      <section>
+        <h4>This thread</h4>
+        <div class="card">
+          <div class="row">
+            <span class="sp" id="ttl" style="font-weight:600">No pack on this page</span>
+            <button class="pri" id="capture">Capture</button>
+          </div>
+          <div class="hint" id="meta" style="margin-top:5px">Press Ctrl+Shift+C anywhere on an AI site.</div>
+        </div>
+      </section>
+
+      <section>
+        <h4>Send to</h4>
+        <div class="grid" id="dests"></div>
+        <div class="row" style="margin-top:7px">
+          <button class="sp" id="fanout">Fan out to all</button>
+          <select id="fid">
+            <option value="distilled">distilled</option>
+            <option value="full">full</option>
+            <option value="atomic">atomic</option>
+          </select>
+        </div>
+      </section>
+
+      <section>
+        <h4>Controls</h4>
+        <div class="card">
+          <label><input type="checkbox" id="redact" checked> <span>Redact secrets &amp; PII</span></label>
+          <label style="margin-top:8px"><input type="checkbox" id="autosub"> <span>Auto-submit on destination</span></label>
+          <label style="margin-top:8px"><input type="checkbox" id="collect" checked> <span>Collect answers to compare</span></label>
+        </div>
+        <div class="row">
+          <button class="sp" id="library">Open library &amp; compare board</button>
+        </div>
+      </section>
+
+      <section>
+        <h4>Shortcuts</h4>
+        <div class="card" style="line-height:2">
+          <div class="row"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>K</kbd><span class="sp muted">command palette</span></div>
+          <div class="row"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>C</kbd><span class="sp muted">capture pack</span></div>
+          <div class="row"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>S</kbd><span class="sp muted">send to…</span></div>
+          <div class="row"><kbd>Alt</kbd><kbd>Shift</kbd><kbd>V</kbd><span class="sp muted">voice typing</span></div>
+        </div>
+      </section>
+    </main>
+    <!-- no bundler, no modules: plain scripts, sharing one PB global -->
+    <script src="env.js"></script>
+    <script src="lib.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

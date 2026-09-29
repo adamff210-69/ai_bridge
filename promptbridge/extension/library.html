@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PromptBridge — Library</title>
+    <link rel="stylesheet" href="page.css" />
+  </head>
+  <body>
+    <header>
+      <b>PromptBridge</b>
+      <span class="pill" id="mode">…</span>
+      <div class="sp"></div>
+      <div class="tabs">
+        <button data-tab="packs" class="on">Packs</button>
+        <button data-tab="compare">Compare</button>
+        <button data-tab="data">Data</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="tab-packs">
+        <h1>Context Pack library</h1>
+        <p class="sub">Every pack is stored on this device. Nothing here has been uploaded anywhere.</p>
+        <div class="row wrap" style="margin-bottom:16px">
+          <input type="search" id="q" placeholder="Search titles, decisions, entities…" style="flex:1;min-width:220px" />
+          <select id="sort">
+            <option value="new">Newest</option>
+            <option value="old">Oldest</option>
+            <option value="big">Largest</option>
+            <option value="tokens">Most tokens</option>
+          </select>
+          <button data-act="send-panel" class="ghost">Open in page</button>
+        </div>
+        <div class="grid cards" id="packs"></div>
+        <div id="packs-empty"></div>
+      </section>
+
+      <section id="tab-compare" hidden>
+        <h1>Compare board</h1>
+        <p class="sub">One prompt, several models, side by side. Nothing is judged for you — the point is to see the disagreement.</p>
+        <div class="row wrap" style="margin-bottom:16px">
+          <select id="run" style="min-width:280px"></select>
+          <button data-act="reopen" class="ghost">Open latest run in the page</button>
+        </div>
+        <div class="grid compare" id="runs"></div>
+        <div id="runs-empty"></div>
+      </section>
+
+      <section id="tab-data" hidden>
+        <h1>Data &amp; privacy</h1>
+        <p class="sub">PromptBridge has no server. Everything below lives in this browser's extension storage.</p>
+        <div class="stat" id="stats"></div>
+
+        <h2>Export / import</h2>
+        <div class="card">
+          <p style="margin:0 0 10px;color:var(--dim)">
+            Packs are plain JSON with a versioned schema. Exporting is the portable format — import one on another machine,
+            or read it in a text editor.
+          </p>
+          <div class="row wrap">
+            <button data-act="export" class="pri">Export all packs</button>
+            <button data-act="import">Import from file…</button>
+            <button data-act="copy-json">Copy as JSON</button>
+          </div>
+          <input type="file" id="file" accept="application/json" hidden />
+        </div>
+
+        <h2>Style DNA</h2>
+        <div class="card" id="dna"></div>
+
+        <h2>Provider keys (optional)</h2>
+        <div class="card">
+          <p style="margin:0 0 10px;color:var(--dim)">
+            Tier 2 prompt rewriting is off by default. A key you add here is stored locally and used only to call that provider
+            <b>directly from this browser</b>. It never passes through PromptBridge.
+          </p>
+          <div class="grid" id="keys" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"></div>
+        </div>
+
+        <h2>Danger zone</h2>
+        <div class="card row wrap">
+          <span class="sp" style="color:var(--dim)">Deletes packs, runs and style DNA on this device.</span>
+          <button data-act="clear" class="danger">Clear everything</button>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="dlg">
+      <div class="hd"><span class="sp" id="dlg-title">Prompt</span><button data-close>✕</button></div>
+      <div class="bd" id="dlg-body"></div>
+      <div class="ft" id="dlg-foot"></div>
+    </dialog>
+
+    <div class="toast" id="toast"></div>
+    <!-- no bundler, no modules: plain scripts, sharing one PB global -->
+    <script src="env.js"></script>
+    <script src="lib.js"></script>
+    <script src="library.js"></script>
+  </body>
+</html>
