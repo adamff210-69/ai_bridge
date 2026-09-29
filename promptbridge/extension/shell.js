@@ -59,7 +59,13 @@ function createShell({ api }) {
   let panel = 'overview';
   let sel = 0;
   let list = [];
-  let state = { pack: null, analysis: null, settings: {}, runs: [], provider: 'anthropic', preview: null, health: null, cutoff: false, dictWords: [], dictSize: 0, flow: false };
+  let state = { pack: null, analysis: null, settings: {}, runs: [], provider: 'anthropic', preview: null, health: null, cutoff: false, dictWords: [], dictSize: 0, flow: false, reading: false };
+  // setSite() is called from boot(), long before the drawer exists. Keep the
+  // value and apply it when the surface is built — otherwise the header site
+  // tag stays "—" forever.
+  let pendingSite = null;
+  // the element focus was on before the shell opened, restored on close
+  let lastFocus = null;
 
   /* ================= toasts ================= */
 
@@ -95,9 +101,12 @@ function createShell({ api }) {
           <span class="tag" id="sitetag">—</span>
           <button data-close aria-label="Close">✕</button>
         </div>
-        <div class="pb-bd" id="drawer"></div>
+        <div class="pb-bd" id="drawer" tabindex="-1"></div>
         <div class="pb-ft" id="foot"></div>
       </div>
+      <button class="pb-reading-pill" id="readingpill" hidden title="Reading mode is dimming older turns. Click to turn it off.">
+        <span aria-hidden="true">📖</span> Reading mode — click to exit
+      </button>
       <div class="pb-toasts" id="toasts" aria-live="polite"></div>`
     );
     wrap.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeAll));
@@ -108,6 +117,9 @@ function createShell({ api }) {
       if (it?.dataset.i != null) { list[+it.dataset.i].run(); closeAll(); }
     });
     $('fab').addEventListener('click', () => (drawerOpen && !paletteOpen ? closeAll() : openDrawer('overview')));
+    $('readingpill').addEventListener('click', () => api.toggleReading());
+    if (pendingSite) { $('sitetag').textContent = pendingSite.label; $('sitedot').style.background = pendingSite.healthy ? 'var(--ok)' : 'var(--err)'; }
+    $('readingpill').hidden = !state.reading;
     api.onOpen?.();
   }
 
@@ -116,6 +128,7 @@ function createShell({ api }) {
     else if (e.key === 'ArrowUp') { sel = Math.max(sel - 1, 0); renderPalette($('palq').value); }
     else if (e.key === 'Enter') { e.preventDefault(); list[sel]?.run(); closeAll(); }
     else if (e.key === 'Escape') { e.preventDefault(); closeAll(); }
+    else if (e.key === 'Tab') { e.preventDefault(); } // one tab stop: the input. Arrows move, Tab doesn't wander behind the modal.
     e.stopPropagation();
   }
 
@@ -153,9 +166,18 @@ function createShell({ api }) {
       : `<div class="pb-item muted">no matching command</div>`;
   }
 
+  const rememberFocus = () => {
+    if (!lastFocus) lastFocus = document.activeElement;
+  };
+  const restoreFocus = () => {
+    if (lastFocus && document.contains(lastFocus)) { try { lastFocus.focus({ preventScroll: true }); } catch { /* element gone */ } }
+    lastFocus = null;
+  };
+
   function openPalette() {
     attach();
     mount();
+    rememberFocus();
     api.onOpen?.();
     paletteOpen = true;
     drawerOpen = false;
@@ -172,6 +194,7 @@ function createShell({ api }) {
   function closeAll() {
     paletteOpen = drawerOpen = false;
     wrap.classList.remove('on', 'pal-open', 'drawer-open');
+    restoreFocus();
   }
 
   /* ---------------- drawer ---------------- */
@@ -185,6 +208,7 @@ function createShell({ api }) {
   function openDrawer(p = 'overview') {
     attach();
     mount();
+    rememberFocus();
     api.onOpen?.();
     paletteOpen = false;
     drawerOpen = true;
@@ -192,6 +216,9 @@ function createShell({ api }) {
     wrap.classList.add('on', 'drawer-open');
     wrap.classList.remove('pal-open');
     render();
+    // move focus into the panel: Esc works immediately, keyboard users are not
+    // left tabbing through the page behind an invisible boundary
+    setTimeout(() => $('drawer')?.focus({ preventScroll: true }), 10);
   }
 
   function render() {
@@ -358,7 +385,7 @@ function createShell({ api }) {
             : 'Uses the browser’s own recogniser. Free and instant, but audio goes to the vendor.'}
         </div>
         <div class="muted" style="font-size:11.5px;margin:0 0 7px">
-          Nothing is bundled: a 45kb extension that becomes 45MB is a different product, and most people never
+          Nothing is bundled: a few-hundred-kilobyte extension that becomes 45MB is a different product, and most people never
           want to carry that. Whisper is yours to run.
         </div>
         ${s().dictateTier === 'whisper-local' ? `<div class="row" style="gap:6px"><input data-set="whisperUrl" value="${escapeHtml(s().whisperUrl || '')}" placeholder="http://localhost:8000/v1/audio/transcriptions" style="flex:1;min-width:0;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:5px 7px;font:inherit"></div>` : ''}
@@ -520,7 +547,24 @@ function createShell({ api }) {
     openDrawer,
     closeAll,
     isOpen: () => paletteOpen || drawerOpen,
-    setSite: (label, healthy) => { if (mounted) { $('sitetag').textContent = label; $('sitedot').style.background = healthy ? 'var(--ok)' : 'var(--err)'; } },
+    setSite: (label, healthy) => {
+      pendingSite = { label, healthy };
+      if (mounted) { $('sitetag').textContent = label; $('sitedot').style.background = healthy ? 'var(--ok)' : 'var(--err)'; }
+    },
+    /**
+     * Reading-mode indicator. It lives in the shell's own shadow root, so the
+     * page can never hide it and there is always a one-click way out.
+     *
+     * Turning it ON mounts the surface if needed: restoring reading mode on a
+     * fresh page load must show the pill immediately — "why is this page
+     * dimmed?" must never be a question without a visible answer.
+     */
+    setReading(on) {
+      state.reading = !!on;
+      if (on && !mounted) { attach(); mount(); }
+      if (!mounted) return;
+      $('readingpill').hidden = !on;
+    },
     setRecording(on, flow) {
       state.flow = !!flow;
       $('fab').classList.toggle('rec', !!on);

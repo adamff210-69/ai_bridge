@@ -172,7 +172,9 @@ structurally a chat. An extension that only runs on eight known hosts cannot ada
 What that permission is actually worth, so it can be judged rather than assumed:
 
 - The content script runs everywhere, but **injects nothing** until the page is confirmed to have a
-  chat composer. Non-chat pages get no DOM, no styles, and no listeners.
+  chat composer. Non-chat pages get no DOM, no listeners, and the only stylesheet the manifest
+  injects (`host.css`) is two rules scoped to PromptBridge's own classes — it cannot touch the
+  site's `body`, `header`, `main` or buttons.
 - `sense.js` **returns before it does any real work** on a page with no composer — the expensive
   transcript scan never runs, so a news article costs a composer scan and an early exit.
 - Nothing is ever transmitted. There is no server. The read is local and in-memory.
@@ -202,7 +204,10 @@ extension/            ← LOAD THIS FOLDER UNPACKED
   dictate.js          self-correction · Flow · vocabulary · commands · speech + local Whisper
   shell.js / .css     Focus Shell (shadow DOM, launcher lazy, panels built on first open)
   content.js          wiring — loaded last
-  page.css            drop-target + drag-cursor feedback on the host page
+  host.css            the ONLY stylesheet injected into host pages — two scoped
+                      rules (drop-target glow, drag cursor), nothing generic
+  page.css            styles for OUR extension pages only (library, onboarding);
+                      never listed in the manifest — see host.css for why
   localbus.js         preview-only message handler
   popup / library / onboarding  (.html + .js)
   icons/
@@ -252,9 +257,12 @@ npm i jsdom
 node _dev/test-sense.mjs      #  46 checks — detection engine
 node _dev/test-dictate.mjs    #  98 checks — dictation engine
 node _dev/test-plain.mjs      # 116 checks — full stack, loads the real files from disk
+node _dev/test-ui.mjs         #  45 checks — UI/UX regressions: host-page safety,
+                              #               reading mode, drawer, popup, fan-out dedupe
 ```
 
-**260 checks.** The integration suite boots the actual `sense.js` + `adapters.js` + `shell.js` +
+**305 checks.** Or just `npm test` (and `npm run test:e2e` drives the unpacked extension in real
+Chrome via puppeteer, if you have it installed). The integration suite boots the actual `sense.js` + `adapters.js` + `shell.js` +
 `inject.js` stack against the mock hosts and drives the real DOM: it clicks Cook and checks the
 composer text changed, drags a pack chip and checks the drop landed, asserts a non-chat page stays
 invisible, and reads the health panel back out of the shadow root.
@@ -263,7 +271,10 @@ The suites earned their keep. Bugs they caught that would otherwise have shipped
 temporal-dead-zone crash in `content.js`, the shell's stylesheet `<link>` being wiped by the
 `innerHTML` that followed it, `render()` never being defined in the library page, a stale packs array
 that made the tray ignore newly saved packs, and a full-lazy shell that quietly hid the launcher
-button on exactly the pages it was meant to appear on.
+button on exactly the pages it was meant to appear on. `test-ui.mjs` exists because of the next
+batch: `page.css` riding in the manifest and restyling every site on the web, reading mode fading
+the entire page via a `*` selector, the popup saving a duplicate pack every time it was opened,
+and fan-out injecting the same run twice on a warm tab.
 
 The detection suite includes `demo/mock-claude-2026.html`, built from the *live* 2026 Claude markup
 including the selectors that are now dead. That distinction is deliberate: a fixture that keeps the

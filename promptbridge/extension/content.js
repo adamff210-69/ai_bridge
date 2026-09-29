@@ -6,7 +6,7 @@ const { buildPack, packForDestination, packSummaryLine } = PB.pack;
 const { analyze, enhance, llmEnhance } = PB.promptsmith;
 const { createDictation, runCommand, Dictionary } = PB.dictate;
 const { createShell } = PB.shell;
-const { applyLens, showLensInPlace, clearLensInPlace, setReadingMode, restoreReadingMode, looksTruncated, draftFollowUp } = PB.lens;
+const { applyLens, showLensInPlace, clearLensInPlace, setReadingMode, restoreReadingMode, refreshReadingMode, readingModeOn, looksTruncated, draftFollowUp } = PB.lens;
 const { watchComposer, watchThread, watchAnswer, lastText, idle } = PB.observe;
 const store = PB.SHARED;
 const { runtime } = PB.env;
@@ -24,7 +24,10 @@ const { runtime } = PB.env;
 
 const { DESTINATIONS, DEFAULT_SETTINGS, getSettings, setSettings, getDNA, recordPrompt, savePack, getPacks, getRuns, uid, getDictionary, saveDictionary } = store;
 
-const adapter = resolveAdapter();
+// `let`, not `const`: boot() re-resolves once settings are known, so a site
+// the user disabled in onboarding genuinely loses its hint (structural
+// detection still works — that is the whole architecture).
+let adapter = resolveAdapter();
 
 let settings = { ...DEFAULT_SETTINGS };
 let dna = null;
@@ -43,7 +46,7 @@ let shell = null; // assigned once `api` exists — createShell touches it while
  * Engine 1 — Context Pack
  * ================================================================== */
 
-async function capture({ silent = false } = {}) {
+async function capture({ silent = false, save = true } = {}) {
   const turns = adapter.turns().filter((t) => t.text);
   if (!turns.length) {
     if (!silent) shell.toast('No conversation found on this page.', 'err');
@@ -51,9 +54,11 @@ async function capture({ silent = false } = {}) {
   }
   const pack = buildPack(turns, { sourceSite: adapter.label, sourceUrl: location.href });
   currentPack = pack;
-  injectedBar?.refresh();
-  await savePack(pack).catch(() => {});
-  if (mounted) shell.setPack(pack);
+  if (save) {
+    injectedBar?.refresh();
+    await savePack(pack).catch(() => {});
+    if (mounted) shell.setPack(pack);
+  }
   if (!silent) shell.toast(`Captured · ${packSummaryLine(pack)}`, 'ok');
   return pack;
 }
@@ -365,7 +370,10 @@ function lens(mode) {
 const toggleReading = () => {
   const on = setReadingMode(adapter, !document.documentElement.classList.contains('pb-reading'));
   settings = { ...settings, readingMode: on };
-  shell.toast(on ? 'Reading mode on — old turns dimmed' : 'Reading mode off', 'ok');
+  // The pill is the escape hatch: a page-wide effect must always leave a
+  // visible, one-click way to undo it, even after a reload.
+  shell.setReading(on);
+  shell.toast(on ? 'Reading mode on — older turns dimmed' : 'Reading mode off', 'ok');
   if (mounted) shell.setSettings(settings);
   return on;
 };
@@ -525,6 +533,16 @@ shell = createShell({ api });
   dna = await getDNA();
   if (mounted) shell.setSettings(settings);
 
+  // Honour the onboarding site toggles. A disabled site keeps working through
+  // pure structural detection — the hint is the only thing switched off.
+  const disabled = Object.entries(settings.sites || {})
+    .filter(([, v]) => v && v.enabled === false)
+    .map(([k]) => k);
+  if (disabled.length) {
+    const next = resolveAdapter(location.hostname, { disabled });
+    if (next.hintId !== adapter.hintId || next.id !== adapter.id) adapter = next;
+  }
+
   // The dictionary is loaded up front, not lazily: the whole point is that the
   // very first thing you dictate already snaps to the words you use. It lives
   // in its own storage key — it is not a setting, and never rides along with
@@ -562,6 +580,9 @@ shell = createShell({ api });
     lastUserCount = users.length;
     const last = [...turns].reverse().find((t) => t.role === 'assistant');
     if (last) shell.setCutoff(looksTruncated(last.text));
+    // a chat that grew needs the reading-mode dimming recomputed, or the
+    // "last 4 turns" window drifts out of date
+    refreshReadingMode(adapter);
   });
 
   window.addEventListener('beforeunload', clearLensInPlace, { once: true });
@@ -571,10 +592,22 @@ shell = createShell({ api });
  * Messages from the background
  * ================================================================== */
 
+/**
+ * Fan-out opens background tabs and retries injection; a warm tab can be
+ * injected from two paths at once (onUpdated + the 1.5s warm-tab timer). The
+ * same runId must land once: twice means the prompt is typed twice and, with
+ * autoSubmit, actually submitted twice on the destination.
+ */
+const injectedRuns = new Set();
+
 runtime.onMessage((msg, _sender, send) => {
   if (!msg?.type) return;
 
   if (msg.type === 'pb:inject') {
+    if (msg.runId) {
+      if (injectedRuns.has(msg.runId)) return send({ ok: true, duplicate: true });
+      injectedRuns.add(msg.runId);
+    }
     const io = patchComposer(adapter);
     if (!io) return send({ ok: false, reason: 'no-composer' });
     const current = io.get();
@@ -611,6 +644,20 @@ runtime.onMessage((msg, _sender, send) => {
   }
 
   if (msg.type === 'pb:ping') return send({ ok: true, adapter: adapter.id, label: adapter.label, healthy: adapter.diagnose().ok });
+  /**
+   * The popup calls this on every open just to render "this thread". It must
+   * PEEK, not capture: an explicit capture is a user action, and the old
+   * behaviour (pb:capture on popup open) saved a duplicate pack and fired a
+   * toast every single time the toolbar icon was clicked.
+   */
+  if (msg.type === 'pb:peek-pack') {
+    // build in memory if there is nothing yet — a glance at the popup must not
+    // write to the library; only an explicit capture (or a transfer) does
+    (currentPack ? Promise.resolve(currentPack) : capture({ silent: true, save: false }))
+      .then((pack) => send({ ok: !!pack, pack }))
+      .catch(() => send({ ok: false }));
+    return true; // hold the channel open across the await
+  }
   if (msg.type === 'pb:open-panel') { shell.openDrawer(msg.panel); return; }
   if (msg.type === 'pb:palette') { shell.openPalette(); return; }
   // Chrome does not deliver a reserved shortcut keydown to the page, so

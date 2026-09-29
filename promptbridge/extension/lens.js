@@ -84,7 +84,15 @@ function showLensInPlace(adapter, mode) {
       .pb-lens-bar button{background:rgba(255,255,255,.06);color:#e6edf3;border:1px solid rgba(255,255,255,.16);
         border-radius:7px;padding:4px 9px;cursor:pointer;font:inherit}
       .pb-lens-bar button:hover{border-color:#7c8cff}
-      .pb-lens-bar .sp{flex:1}`;
+      .pb-lens-bar .sp{flex:1}
+      @media (prefers-color-scheme:light){
+        .pb-lens{background:rgba(91,110,224,.07);border-color:rgba(91,110,224,.38);color:#1f2430}
+        .pb-lens::before{background:#5b6ee0}
+        .pb-lens-bar{color:#3c4350}
+        .pb-lens-bar b{color:#5b6ee0}
+        .pb-lens-bar button{background:rgba(31,36,48,.05);color:#1f2430;border-color:rgba(31,36,48,.18)}
+        .pb-lens-bar button:hover{border-color:#5b6ee0}
+      }`;
     document.head.appendChild(s);
   }
 
@@ -125,22 +133,31 @@ function clearLensInPlace() {
 }
 
 /* ================================================================== *
- * Reading Mode — the page, but quieter
+ * Reading Mode — the conversation, but quieter
+ *
+ * Implementation note, because this one shipped broken once: the dimming is
+ * applied by adding a class to the turn ELEMENTS the sensing engine found,
+ * never by generating a CSS selector from `adapter.messageSel`. A sensed
+ * adapter has no selector to give (messageSel is null by design), and the
+ * old fallback `adapter.messageSel || '*'` therefore produced
+ * `html.pb-reading *{opacity:.28}` — the entire page, faded to a ghost of
+ * itself, persisted in localStorage. That is the "extension collapses the
+ * AI page" bug. Elements are the truth; the engine already found them.
  * ================================================================== */
 
 const RM_ID = 'pb-reading-style';
 const RM_KEY = 'pb-reading-on';
+const RM_DIM = 'pb-rm-dim';
+/** how many of the most recent turns stay fully visible */
+const RM_KEEP = 4;
 
-const READING_CSS = (msgSel) => `
-  html.pb-reading body{--pb-rm:1}
-  html.pb-reading ${msgSel}{transition:opacity .18s ease,filter .18s ease}
-  html.pb-reading ${msgSel}{opacity:.28;filter:saturate(.4)}
-  html.pb-reading ${msgSel}:nth-last-of-type(-n+4){opacity:1;filter:none}
-  html.pb-reading ${msgSel}:hover{opacity:1;filter:none}
-  html.pb-reading ${msgSel} p,html.pb-reading ${msgSel} li{font-size:16.5px;line-height:1.78;max-width:72ch}
-  html.pb-reading pre{font-size:13.5px;line-height:1.6}
-  html.pb-reading ${msgSel}:nth-last-of-type(-n+4){border-left:2px solid #7c8cff;padding-left:14px;margin-left:-16px}
-  @media (prefers-reduced-motion:reduce){html.pb-reading ${msgSel}{transition:none}}`;
+const READING_CSS = `
+  .${RM_DIM}{transition:opacity .18s ease,filter .18s ease}
+  .${RM_DIM}{opacity:.28;filter:saturate(.4)}
+  .${RM_DIM}:hover{opacity:1;filter:none}
+  .${RM_DIM}{border-left:2px solid #7c8cff;padding-left:14px;margin-left:-16px}
+  @media (prefers-color-scheme:light){.${RM_DIM}{border-left-color:#5b6ee0}}
+  @media (prefers-reduced-motion:reduce){.${RM_DIM}{transition:none}}`;
 
 /**
  * localStorage throws, rather than returning null, on a file:// or sandboxed
@@ -155,22 +172,55 @@ const recallReading = () => {
   try { return localStorage.getItem(RM_KEY) === '1'; } catch { return false; }
 };
 
+const clearDimClasses = () => {
+  document.querySelectorAll('.' + RM_DIM).forEach((el) => el.classList.remove(RM_DIM));
+};
+
+/**
+ * Turn reading mode on or off.
+ *
+ * Returns the resulting state. Refuses (returns false, applies nothing) when
+ * there are no conversation turns to work on — a page with no transcript must
+ * never be dimmed, not even slightly.
+ */
 function setReadingMode(adapter, on) {
   const html = document.documentElement;
   if (!on) {
     html.classList.remove('pb-reading');
     document.getElementById(RM_ID)?.remove();
+    clearDimClasses();
     return rememberReading(false);
   }
-  const s = document.createElement('style');
-  s.id = RM_ID;
-  s.textContent = READING_CSS(adapter.messageSel || '*');
-  document.head.appendChild(s);
+
+  let els = [];
+  try { els = PB.adapters.messageEls(adapter); } catch { els = []; }
+  if (!els.length) return rememberReading(false);
+
+  if (!document.getElementById(RM_ID)) {
+    const s = document.createElement('style');
+    s.id = RM_ID;
+    s.textContent = READING_CSS;
+    document.head.appendChild(s);
+  }
   html.classList.add('pb-reading');
+
+  // everything except the last few turns goes quiet. Element classes, so the
+  // page's own DOM shape is irrelevant and new turns never re-dim old code
+  // paths.
+  clearDimClasses();
+  for (const el of els.slice(0, Math.max(0, els.length - RM_KEEP))) el.classList.add(RM_DIM);
   return rememberReading(true);
 }
 
 const readingModeOn = () => recallReading();
+
+/** Re-apply the dimming to the current turn list (a chat that grew).
+ *  The live class is the source of truth here — on origins where localStorage
+ *  throws (file://, sandboxes) recallReading() cannot see what the toggle did
+ *  seconds ago, and a guard on it would silently skip the refresh. */
+function refreshReadingMode(adapter) {
+  if (document.documentElement.classList.contains('pb-reading')) setReadingMode(adapter, true);
+}
 
 function restoreReadingMode(adapter) {
   if (readingModeOn()) setReadingMode(adapter, true);
@@ -206,6 +256,6 @@ function draftFollowUp(pack, answerText = '') {
   return 'Continue from exactly where that stopped. Do not recap what you already said.';
 }
 
-PB.lens = { messageEls, LENS_MODES, applyLens, showLensInPlace, clearLensInPlace, setReadingMode, readingModeOn, restoreReadingMode, looksTruncated, draftFollowUp };
+PB.lens = { messageEls, LENS_MODES, applyLens, showLensInPlace, clearLensInPlace, setReadingMode, readingModeOn, refreshReadingMode, restoreReadingMode, looksTruncated, draftFollowUp };
 
 })(globalThis.PB = globalThis.PB || {});

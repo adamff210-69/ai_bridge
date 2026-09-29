@@ -1,0 +1,13 @@
+{
+  "name": "promptbridge",
+  "version": "1.0.0",
+  "description": "Dev-only test harness for the PromptBridge extension. The extension itself has no build step: load extension/ unpacked.",
+  "scripts": {
+    "test": "node _dev/test-sense.mjs && node _dev/test-dictate.mjs && node _dev/test-plain.mjs && node _dev/test-ui.mjs",
+    "test:e2e": "node _dev/e2e.mjs"
+  },
+  "dependencies": {
+    "jsdom": "^30.1.1"
+  },
+  "private": true
+}

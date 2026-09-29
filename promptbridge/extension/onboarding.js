@@ -28,8 +28,8 @@ const toast = (m, k = '') => {
 
 const HELP = {
   tier: {
-    webspeech: 'Uses the browser’s built-in recogniser. Free and instant. Audio is handled by whoever built your browser. Nothing is bundled: a 45kb extension that becomes 45MB is a different product, and most people would rather not carry that. Switch to Local Whisper and run the model yourself — the choice is a privacy decision, and it should be yours to make.',
-    'whisper-local': 'Point at a whisper.cpp / faster-whisper / LocalAI server on your own machine. Audio never leaves your machine. Nothing is bundled — a 45kb extension that becomes 45MB is a different product.',
+    webspeech: 'Uses the browser’s built-in recogniser. Free and instant. Audio is handled by whoever built your browser. Nothing is bundled: a few-hundred-kilobyte extension that becomes 45MB is a different product, and most people would rather not carry that. Switch to Local Whisper and run the model yourself — the choice is a privacy decision, and it should be yours to make.',
+    'whisper-local': 'Point at a whisper.cpp / faster-whisper / LocalAI server on your own machine. Audio never leaves your machine. Nothing is bundled — a few-hundred-kilobyte extension that becomes 45MB is a different product.',
   },
   fid: {
     distilled: 'A short brief: goal, decisions, constraints, artifacts. This is what a fresh model can actually use.',

@@ -420,9 +420,17 @@ function assignRoles(turns) {
 
 let cache = null;
 
-/** Cheap identity of "the page we already analysed". */
+/** Cheap identity of "the page we already analysed".
+ *  Counts the container-ish tags a chat can mount turns into — divs alone
+ *  miss `<article>`-based transcripts (ChatGPT) and `<section>` lists, and a
+ *  stale fingerprint meant freshly appended turns were invisible until some
+ *  unrelated div changed. */
 function pageFingerprint() {
-  return [location.pathname.slice(0, 60), document.querySelectorAll('div').length, document.body?.children.length || 0].join('|');
+  return [
+    location.pathname.slice(0, 60),
+    document.querySelectorAll('div,article,section,ul,ol').length,
+    document.body?.children.length || 0,
+  ].join('|');
 }
 
 function analyse({ hint = null } = {}) {

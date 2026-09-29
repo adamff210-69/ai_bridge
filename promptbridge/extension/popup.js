@@ -28,8 +28,12 @@ async function boot() {
 }
 
 async function refreshPack() {
-  const r = await runtime.send({ type: 'pb:capture' }).catch(() => null);
-  if (!r?.ok) return;
+  // PEEK, not capture. Opening the popup is a glance, not an action: the old
+  // pb:capture here saved a duplicate pack and toasted the page every time
+  // the toolbar icon was clicked.
+  const r = await runtime.send({ type: 'pb:peek-pack' }).catch(() => null);
+  if (!r?.ok || !r.pack) return;
+  const pack = r.pack;
   $('#ttl').textContent = r.pack.title;
   $('#meta').textContent =
     `${r.pack.meta.messageCount} msgs · ~${r.pack.meta.tokenEstimate} tokens · ${r.pack.intent.taskType} · ` +

@@ -64,6 +64,12 @@ function watchComposer(adapter, onChange, { identityMs = 2000 } = {}) {
 /**
  * Watch the tail of the thread. Fires when the last assistant message's text
  * changes (streaming) or when the message count changes.
+ *
+ * Binds to the turn elements the sensing engine found — `adapter.messageSel`
+ * is null on every sensed adapter (a CSS selector cannot honestly describe a
+ * list found by walking the tree), so the old selector-based bind never bound
+ * anything and the 1.5s interval below did all the work. Same contract, but
+ * the MutationObserver now actually fires during streaming.
  */
 function watchThread(adapter, onChange, { signal } = {}) {
   let observer = null;
@@ -71,7 +77,8 @@ function watchThread(adapter, onChange, { signal } = {}) {
 
   const bind = () => {
     observer?.disconnect();
-    const els = adapter.messageSel ? [...document.querySelectorAll(adapter.messageSel)] : [];
+    let els = [];
+    try { els = PB.adapters.messageEls(adapter); } catch { els = []; }
     const target = els.at(-1);
     if (!target) return;
     observer = new MutationObserver(() => {

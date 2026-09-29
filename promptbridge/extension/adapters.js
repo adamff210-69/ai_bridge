@@ -59,7 +59,9 @@ function composerIO(el) {
   if (!el) return { get: () => '', set: () => false };
   const editable = el.isContentEditable || el.getAttribute?.('contenteditable') === 'true';
   return {
-    get: () => (editable ? el.innerText.replace(/\u00a0/g, ' ') : el.value || ''),
+    // `?? textContent` : innerText is missing in exotic embedders (and jsdom);
+    // a hard crash here took out the drawer footer, of all things.
+    get: () => (editable ? (el.innerText ?? el.textContent ?? '').replace(/\u00a0/g, ' ') : el.value || ''),
     set: (v) => {
       if (editable) setEditableText(el, v);
       else setNativeValue(el, v);
@@ -273,8 +275,15 @@ function buildAdapter(hint, { label } = {}) {
   return api;
 }
 
-function resolveAdapter(host = location.hostname) {
-  const hint = HINTS.find((h) => h.detect(host)) || null;
+/**
+ * @param {string} host
+ * @param {{disabled?: string[]}} opts  site ids the user switched off in
+ *        onboarding. A disabled site loses only its HINT — structural
+ *        detection still applies, because that is the architecture.
+ */
+function resolveAdapter(host = location.hostname, { disabled = [] } = {}) {
+  const off = new Set(disabled);
+  const hint = HINTS.find((h) => h.detect(host) && !off.has(h.id)) || null;
   return buildAdapter(hint);
 }
 

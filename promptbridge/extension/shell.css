@@ -20,8 +20,14 @@
 @keyframes pbflow{0%,100%{box-shadow:0 0 0 0 rgba(63,185,80,.55)}50%{box-shadow:0 0 0 9px rgba(63,185,80,0)}}
 @keyframes pbpulse{50%{box-shadow:0 0 0 7px rgba(248,81,73,.16)}}
 
+/* The scrim is for the command palette only — a deliberate modal.
+   The drawer is a side panel: dimming and blocking the whole conversation
+   behind it made the page feel hijacked ("the extension collapses the AI
+   page"), and you cannot copy from the thread while choosing a destination.
+   The chat stays live beside the drawer; the close button, Esc and the
+   launcher all dismiss it. */
 .pb-scrim{position:fixed;inset:0;background:rgba(3,6,12,.55);backdrop-filter:blur(3px);display:none}
-.pb.on .pb-scrim{display:block}
+.pb.pal-open .pb-scrim{display:block}
 
 /* command palette */
 .pb-pal{position:fixed;top:11vh;left:50%;transform:translateX(-50%) translateY(-8px);width:min(620px,92vw);
@@ -89,6 +95,26 @@
 .pb-toast.err{border-left-color:var(--err)}
 .pb-toast.ok{border-left-color:var(--ok)}
 @keyframes pbslide{from{opacity:0;transform:translateX(14px)}}
+
+/* reading-mode exit pill — lives outside the drawer so it is visible (and
+   dismissible) no matter what else on the page is going on */
+.pb-reading-pill{position:fixed;left:18px;bottom:18px;z-index:2147483641;display:inline-flex;align-items:center;gap:7px;
+  background:var(--bg2);color:var(--fg);border:1px solid var(--acc);border-radius:999px;padding:7px 13px;
+  font-size:12.5px;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.35)}
+.pb-reading-pill:hover{background:var(--acc);color:#0b1020}
+.pb-reading-pill:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.pb-reading-pill[hidden]{display:none}
+
+/* light scheme: the shell follows the browser/OS instead of dropping a dark
+   island onto a light page */
+@media (prefers-color-scheme:light){
+  .pb{--bg:#ffffff;--bg2:#f2f4f8;--line:#d5dae2;--fg:#1f2430;--dim:#5c6575;--acc:#4c5fd6;--ok:#1a7f37;--warn:#9a6700;--err:#cf222e}
+  .pb code{background:rgba(31,36,48,.07)}
+  .pb-scrim{background:rgba(20,25,35,.32)}
+  .pb-item.sel{background:#e8ebf3}
+  .pb button.pri,.pb-reading-pill:hover{color:#ffffff}
+  .pb-toast{box-shadow:0 8px 26px rgba(31,36,48,.18)}
+}
 
 @media (prefers-reduced-motion:reduce){.pb *,.pb{animation:none!important;transition:none!important}}
 @media (max-width:520px){.pb-drawer{width:100vw}.pb-item .h{display:none}}

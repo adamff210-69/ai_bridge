@@ -1,0 +1,27 @@
+/* PromptBridge — the ONLY stylesheet injected into host pages.
+ *
+ * This file is loaded by manifest.json `content_scripts.css` on every site,
+ * so it must stay this small. Nothing here may use a bare element selector
+ * (html/body/header/main/h1/button …): a content-script stylesheet is
+ * author-origin CSS and competes with the site's own layout rules. The old
+ * page.css was listed here and restyled every page on the web — squeezing
+ * the AI sites' own <main> into a centred column and darkening their body.
+ * That bug is why this file exists.
+ *
+ * Anything the Focus Shell needs is scoped inside its own shadow root
+ * (shell.css); anything the extension pages need lives in page.css, which is
+ * only ever <link>ed from library.html / onboarding.html.
+ *
+ * Two rules, both scoped to classes we ourselves put on the host document:
+ */
+
+/* the composer glows green while a Context Pack is being dragged onto it */
+.pb-drop-target {
+  outline: 2px solid #3fb950 !important;
+  outline-offset: 2px !important;
+  border-radius: 12px !important;
+  transition: outline-color .12s ease;
+}
+
+/* page-wide copy cursor while a drag from the pack tray is in flight */
+html.pb-dragging { cursor: copy !important; }

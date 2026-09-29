@@ -256,10 +256,18 @@ console.log('\n── injected bar: cook this prompt, drop a pack ────�
 {
   const { w, errors } = await open('demo/mock-unknown.html');
   await settle(w, 400);
+  // shell.js resolves shell.css relative to document.currentScript. window.eval
+  // has no currentScript, so give it one that points at the real file — this
+  // is exactly what a <script src> tag would provide, which is how the
+  // extension (chrome.runtime.getURL) and the demo pages load it.
+  const fakeScript = w.document.createElement('script');
+  Object.defineProperty(fakeScript, 'src', { value: pathToFileURL(resolve('extension/shell.js')).href });
+  Object.defineProperty(w.document, 'currentScript', { configurable: true, get: () => fakeScript });
   // real content-script stack, in manifest order
   for (const f of ['env.js', 'lib.js', 'sense.js', 'adapters.js', 'observe.js', 'lens.js', 'promptsmith.js', 'pack.js', 'dictate.js', 'shell.js', 'inject.js'])
     w.eval(readFileSync(resolve('extension/' + f), 'utf8'));
   w.eval(readFileSync(resolve('extension/content.js'), 'utf8'));
+  delete w.document.currentScript;
   await settle(w, 400);
 
   const d = w.document;
